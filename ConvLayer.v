@@ -23,7 +23,7 @@ module ConvLayer (
 	);
 
 	parameter Majority_enable = 0;
-	parameter fold = 2;
+	parameter fold = 1;
 	parameter fold_log = $clog2(fold);
 
 	parameter ch_out = 64;
@@ -82,7 +82,7 @@ module ConvLayer (
 
 
 	// Weights
-	reg [stream_w_size-1 : 0] w_dist [ch_out-1 : 0];
+	reg [ch_in*k_s*k_s-1 : 0] w_dist [ch_out-1 : 0];
 	integer i;
 	always @ (posedge clk) begin
 		if (stream_w_en) begin 
@@ -123,7 +123,7 @@ module ConvLayer (
 
 
 	// Threshold
-	reg [stream_th_size-1 : 0] Threshold_dist [ch_out-1 : 0];
+	reg [result_width-1 : 0] Threshold_dist [ch_out-1 : 0];
 	integer k;
 	always @ (posedge clk) begin
 		if (stream_th_en) begin 
