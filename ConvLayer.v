@@ -15,6 +15,7 @@ module ConvLayer (
 		
 		stream_th,
 		stream_th_en,
+		stream_th_addr,
 
 		stream_maxpool_en,				
 
@@ -22,7 +23,7 @@ module ConvLayer (
 	);
 
 	parameter Majority_enable = 0;
-	parameter fold = 1;
+	parameter fold = 2;
 	parameter fold_log = $clog2(fold);
 
 	parameter ch_out = 64;
@@ -41,6 +42,7 @@ module ConvLayer (
 	parameter pop_size = k_s*k_s*ch_in;
 
 	parameter stream_w_size = (fold == 1) ?  (ch_in*k_s*k_s) : (ch_in*k_s*k_s*ch_out_fold);
+	parameter stream_th_size = (fold == 1) ?  (result_width) : (result_width*ch_out_fold);
 
 	input clk;
 	input reset;
@@ -54,11 +56,13 @@ module ConvLayer (
 	input stream_w_en;
 	input [fold_log-1:0] stream_w_addr;
 	
-	input [result_width-1 : 0] stream_th;
+	input [stream_th_size-1 : 0] stream_th;
 	input stream_th_en;
+	input [fold_log-1:0] stream_th_addr;
 
 	input stream_maxpool_en;
 	output reg [ch_out-1 : 0] stream_out;
+
 
 	// input 
 	wire [ch_in*k_s*k_s-1 : 0] buffer_parallel_out_flat;
@@ -76,6 +80,7 @@ module ConvLayer (
 		.parallel_out_flat(buffer_parallel_out_flat)
 	);
 
+
 	// Weights
 	reg [stream_w_size-1 : 0] w_dist [ch_out-1 : 0];
 	integer i;
@@ -87,7 +92,6 @@ module ConvLayer (
 			end
 		end
 	end
-
 	wire [stream_w_size-1 : 0] w_mem;
 	defparam Memory_Block_inst_w.width = stream_w_size;
 	defparam Memory_Block_inst_w.length = fold;
@@ -101,7 +105,6 @@ module ConvLayer (
 		.r_addr(fold_add),
 		.r_data(w_mem)
     );
-
 	reg [ch_in*k_s*k_s-1 : 0] w [ch_out_fold-1 : 0];
 	integer i_w, i_w_2;
 	always @ (*) begin
@@ -119,44 +122,46 @@ module ConvLayer (
 	end
 
 
-
-
-
-
-
-
-
-
-
-
 	// Threshold
-	reg [result_width-1 : 0] Threshold_all [ch_out-1 : 0];
+	reg [stream_th_size-1 : 0] Threshold_dist [ch_out-1 : 0];
 	integer k;
 	always @ (posedge clk) begin
 		if (stream_th_en) begin 
-			Threshold_all[0] <= stream_th;
+			Threshold_dist[0] <= stream_th;
 			for (k = 1; k < ch_out; k = k + 1) begin
-				Threshold_all[k] <= Threshold_all[k-1];
+				Threshold_dist[k] <= Threshold_dist[k-1];
 			end
 		end
 	end
-	reg [ch_in*k_s*k_s-1 : 0] Threshold [ch_out_fold-1 : 0];
-	integer i_t;
+	wire [stream_th_size-1 : 0] th_mem;
+	defparam Memory_Block_inst_th.width = stream_th_size;
+	defparam Memory_Block_inst_th.length = fold;
+	Memory_Block	Memory_Block_inst_th(
+		.clk(clk), 
+		
+		.w_enable(stream_th_en),
+		.w_addr(stream_th_addr),
+		.w_data(stream_th),
+
+		.r_addr(fold_add),
+		.r_data(th_mem)
+    );
+	reg [result_width-1 : 0] Threshold [ch_out_fold-1 : 0];
+	integer i_t, i_t_2;
 	always @ (*) begin
 		if (fold != 1) begin
 			for (i_t = 0; i_t < ch_out_fold; i_t = i_t + 1) begin
-				Threshold[i_t] = Threshold_all[fold_add*ch_out_fold + i_t];
+				for (i_t_2 = 0; i_t_2 < result_width; i_t_2 = i_t_2 + 1) begin
+					Threshold[i_t][i_t_2] = th_mem[i_t*result_width + i_t_2];
+				end
 			end
-		end else begin
+		end 
+		else begin
 			for (i_t = 0; i_t < ch_out; i_t = i_t + 1) begin
-				Threshold[i_t] = Threshold_all[i_t];
+				Threshold[i_t] = Threshold_dist[i_t];
 			end
 		end
 	end
-
-
-
-
 
 
 	// PE implementations
@@ -200,6 +205,7 @@ module ConvLayer (
 		end
 	end
 
+
 	wire [ch_out-1 : 0] stream_maxpool;
 	defparam MaxPool_inst.ch_out = ch_out;
 	defparam MaxPool_inst.k_s_maxpool = k_s_maxpool;
@@ -214,6 +220,7 @@ module ConvLayer (
 		.stream_out(stream_maxpool)
 	);
 
+
 	reg [ch_out-1 : 0] stream_maxpool_reg;
 	always @(posedge clk) begin
 		if(reset) begin
@@ -223,6 +230,7 @@ module ConvLayer (
 			stream_maxpool_reg <= stream_maxpool;
 		end
 	end
+
 
 	always @ (*)begin
 		stream_out = (MAXPOOL_enable == 1) ? stream_maxpool_reg : stream_thresh_reg;
