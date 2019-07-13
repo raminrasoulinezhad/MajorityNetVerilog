@@ -25,7 +25,6 @@ module WideXNOR_reg(
 	always @ (posedge clk) begin
 		a_reg <= {{a_reg[wide-2 : 0]},{a}};
 		w_reg <= {{w_reg[wide-2 : 0]},{w}};
-		x <= x_temp;
 	end
 
 	wire [wide-1 : 0] x_temp;
@@ -35,5 +34,9 @@ module WideXNOR_reg(
 		.w(w_reg),
 		.x(x_temp)
 	);	
+
+	always @ (posedge clk) begin
+		x <= x_temp;
+	end
 
 endmodule

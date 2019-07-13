@@ -4,7 +4,7 @@ module ConvLayer (
 		clk,
 		reset,
 
-		fold_add,
+		fold_addr,
 
 		stream_act,
 		stream_act_en,
@@ -24,7 +24,7 @@ module ConvLayer (
 
 	parameter Majority_enable = 0;
 	parameter fold = 1;
-	parameter fold_log = $clog2(fold);
+	parameter fold_log = (fold == 1)? 1 : $clog2(fold);
 
 	parameter ch_out = 64;
 	parameter ch_out_fold = ch_out/fold;
@@ -47,7 +47,7 @@ module ConvLayer (
 	input clk;
 	input reset;
 
-	input [fold_log-1:0] fold_add;
+	input [fold_log-1:0] fold_addr;
 
 	input [ch_in-1 : 0] stream_act;
 	input stream_act_en;
@@ -102,7 +102,7 @@ module ConvLayer (
 		.w_addr(stream_w_addr),
 		.w_data(stream_w),
 
-		.r_addr(fold_add),
+		.r_addr(fold_addr),
 		.r_data(w_mem)
     );
 	reg [ch_in*k_s*k_s-1 : 0] w [ch_out_fold-1 : 0];
@@ -143,7 +143,7 @@ module ConvLayer (
 		.w_addr(stream_th_addr),
 		.w_data(stream_th),
 
-		.r_addr(fold_add),
+		.r_addr(fold_addr),
 		.r_data(th_mem)
     );
 	reg [result_width-1 : 0] Threshold [ch_out_fold-1 : 0];
@@ -196,7 +196,7 @@ module ConvLayer (
 		else begin
 			if (fold != 1) begin 
 				for (i_s = 0; i_s < ch_out_fold; i_s = i_s + 1) begin
-					stream_thresh_reg[fold_add*ch_out_fold + i_s] <= stream_thresh[i_s];
+					stream_thresh_reg[fold_addr*ch_out_fold + i_s] <= stream_thresh[i_s];
 				end
 			end 
 			else begin
@@ -209,7 +209,7 @@ module ConvLayer (
 	wire [ch_out-1 : 0] stream_maxpool;
 	defparam MaxPool_inst.ch_out = ch_out;
 	defparam MaxPool_inst.k_s_maxpool = k_s_maxpool;
-	defparam MaxPool_inst.w_in = w_in;
+	defparam MaxPool_inst.w_in = w_in + 2*(pad - (k_s/2));
 	MaxPool 	MaxPool_inst(
 		.clk(clk),
 		.reset(reset),

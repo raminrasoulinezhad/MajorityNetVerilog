@@ -20,8 +20,7 @@ module Single_XNORMaj_M_reg(
 	reg [M-1:0] w_reg;
 	always @ (posedge clk) begin
 		a_reg <= a; 
-		w_reg <= w; 
-		m <= m_temp;
+		w_reg <= w;
 	end
 
 	wire m_temp;
@@ -32,4 +31,8 @@ module Single_XNORMaj_M_reg(
     	.m(m_temp)
     );
     
+    always @ (posedge clk) begin
+		m <= m_temp;
+	end
+
 endmodule

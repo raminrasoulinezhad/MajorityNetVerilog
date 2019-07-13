@@ -8,7 +8,6 @@ module Single_FA_reg(
 	reg [2:0] a_reg;
 	always @ (posedge clk) begin
 		a_reg <= a; 
-		m <= m_temp;
 	end
 
 	wire [1:0] m_temp;
@@ -17,4 +16,7 @@ module Single_FA_reg(
     	.m(m_temp)
     );
     
+    always @ (posedge clk) begin
+		m <= m_temp;
+	end
 endmodule

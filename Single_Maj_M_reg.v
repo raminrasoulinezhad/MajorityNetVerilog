@@ -17,7 +17,6 @@ module Single_Maj_M_reg(
 	reg [M-1:0] a_reg;
 	always @ (posedge clk) begin
 		a_reg <= a; 
-		m <= m_temp;
 	end
 
 	wire m_temp;
@@ -26,5 +25,9 @@ module Single_Maj_M_reg(
     	.a(a_reg),
     	.m(m_temp)
     );
+
+	always @ (posedge clk) begin
+		m <= m_temp;
+	end
     
 endmodule

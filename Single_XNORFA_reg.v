@@ -11,7 +11,6 @@ module Single_XNORFA_reg(
 	always @ (posedge clk) begin
 		a_reg <= a; 
 		w_reg <= w; 
-		m <= m_temp;
 	end
 
 	wire [1:0] m_temp;
@@ -21,4 +20,7 @@ module Single_XNORFA_reg(
     	.m(m_temp)
     );
     
+	always @ (posedge clk) begin
+		m <= m_temp;
+	end
 endmodule
