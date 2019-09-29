@@ -4,7 +4,7 @@
 // To use this module you should:
 //	set the following parameters:
 //		Majority_enable = 0/1
-//		pop_size = in the case of (Majority_enable == 1), pop_size should be multiply of 3
+//		Majority_M = 3/5/7/9
 //////////////////////////////////////////////////////////////////////////////////////////
 
 `timescale 1ns / 1ps
@@ -19,9 +19,10 @@ module XNORPop_reg(
     );
 
     parameter Majority_enable = 0;
+    parameter Majority_M = 3;
     // 576 = 3 * 3 * 64
-    parameter pop_size = 576;		
-    parameter maj_size = pop_size / 3;
+    parameter pop_size = 576;	
+    parameter maj_size = pop_size / Majority_M;
     parameter result_size_normal = $clog2(pop_size);
     parameter result_size_majority = $clog2(maj_size);
     parameter result_size = (Majority_enable == 1)? result_size_majority : result_size_normal;
@@ -31,12 +32,11 @@ module XNORPop_reg(
 
     input a;
     input w;
-	
-	reg [pop_size-1 : 0] a_reg;
-	reg [pop_size-1 : 0] w_reg;
 
     output reg [result_size-1 : 0] pop;
 
+	reg [pop_size-1 : 0] a_reg;
+	reg [pop_size-1 : 0] w_reg;
 	always @ (posedge clk) begin
 		a_reg <= {{a_reg[pop_size-2 : 0]},{a}};
 		w_reg <= {{w_reg[pop_size-2 : 0]},{w}};
@@ -45,6 +45,7 @@ module XNORPop_reg(
 	wire [result_size-1 : 0] pop_temp;
 	defparam XNORPop_inst.Majority_enable = Majority_enable;
 	defparam XNORPop_inst.pop_size = pop_size;
+	defparam XNORPop_inst.Majority_M = Majority_M;
 	XNORPop 	XNORPop_inst(
 		.a(a_reg),
 		.w(w_reg),

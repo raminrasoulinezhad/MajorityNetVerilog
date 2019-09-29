@@ -14,11 +14,16 @@ module XNORPop(
     );
 	
 	parameter Majority_enable = 0;
+	parameter Majority_approximate = 0;
+	parameter Majority_M = 9;
+	parameter Majority_M_log = $clog2(Majority_M);
+
 	// 576 = 3 * 3 * 64
     parameter pop_size = 576;	
-
-    parameter pop_size_log = $clog2(pop_size);
-    parameter maj_size = pop_size / 3;
+    parameter pad = ((Majority_enable) & (pop_size%Majority_M != 0))? (Majority_M-(pop_size%Majority_M)): 0;
+    parameter pop_size_padded = pop_size + pad;
+    parameter pop_size_log = $clog2(pop_size_padded);
+    parameter maj_size = pop_size_padded / Majority_M;
     parameter maj_size_log = $clog2(maj_size);
 
     parameter result_size = (Majority_enable == 1)? maj_size_log : pop_size_log;
@@ -31,15 +36,56 @@ module XNORPop(
     // produces XNORs (result of binary multipliers)
     wire  [pop_size-1 : 0] XNORs;
     assign XNORs = a ~^ w;
+    
+    wire [pop_size_padded-1 : 0] XNORs_padded;
+    assign XNORs_padded = {{pad{1'b0}},{XNORs}};
 
     // produces majority outputs
+    reg [maj_size-1 : 0] Majs;
+    reg [Majority_M_log-1:0] sum [maj_size-1 : 0];
+    reg [2:0] Majs_9apx_internal [maj_size-1 : 0];
+    integer i1, i2;
+	always @(*) begin
+		for(i1 = 0; i1 < maj_size; i1 = i1 + 1) begin
+			sum[i1] = 0;
+
+			if (Majority_approximate)begin
+				if (Majority_M == 3)begin
+					// there is no approximation in this case
+					Majs[i1] = ((XNORs_padded[i1*3]&XNORs_padded[i1*3+1]) | (XNORs_padded[i1*3+1]&XNORs_padded[i1*3+2]) | (XNORs_padded[i1*3+2]&XNORs_padded[i1*3]));
+				end 
+				else if (Majority_M == 5) begin
+					Majs[i1] = 0;
+				end
+				else if (Majority_M == 7) begin
+					Majs[i1] = 0;
+				end
+				else if (Majority_M == 9) begin
+					// two layers of Majority-3 circuits
+					Majs_9apx_internal[i1][0] = ((XNORs_padded[i1*9]&XNORs_padded[i1*9+1]) | (XNORs_padded[i1*9+1]&XNORs_padded[i1*9+2]) | (XNORs_padded[i1*9+2]&XNORs_padded[i1*9]));
+					Majs_9apx_internal[i1][1] = ((XNORs_padded[i1*9+3]&XNORs_padded[i1*9+4]) | (XNORs_padded[i1*9+4]&XNORs_padded[i1*9+5]) | (XNORs_padded[i1*9+5]&XNORs_padded[i1*9+3]));
+					Majs_9apx_internal[i1][2] = ((XNORs_padded[i1*9+6]&XNORs_padded[i1*9+7]) | (XNORs_padded[i1*9+7]&XNORs_padded[i1*9+8]) | (XNORs_padded[i1*9+8]&XNORs_padded[i1*9+6]));
+					Majs[i1] = ((Majs_9apx_internal[i1][0]&Majs_9apx_internal[i1][1]) | (Majs_9apx_internal[i1][1]&Majs_9apx_internal[i1][2]) | (Majs_9apx_internal[i1][2]&Majs_9apx_internal[i1][0]));
+				end
+			end
+			else begin
+				for (i2 = 0; i2 < Majority_M; i2 = i2 + 1)begin
+					sum[i1] = sum[i1] + XNORs_padded[(i1 * Majority_M) + i2];
+				end
+				Majs[i1] = (sum[i1] > ((Majority_M-1)/2))? 1'b1: 1'b0;
+			end
+		end
+	end
+
+    // produces majority outputs
+    /*
     reg  [maj_size-1 : 0] Majs;
     integer i;
 	always @(*) begin
 		for(i = 0; i < maj_size; i = i + 1) begin
-			Majs[i] = ((XNORs[i*3]&XNORs[i*3+1]) | (XNORs[i*3+1]&XNORs[i*3+2]) | (XNORs[i*3+2]&XNORs[i*3]));
+			Majs[i] = ((XNORs_padded[i*3]&XNORs_padded[i*3+1]) | (XNORs_padded[i*3+1]&XNORs_padded[i*3+2]) | (XNORs_padded[i*3+2]&XNORs_padded[i*3]));
 		end
-	end
+	end*/
 
 	// produces pop count of XNORs
     reg [pop_size_log-1 : 0] pop_temp;
