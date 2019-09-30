@@ -44,6 +44,8 @@ module XNORPop(
     reg [maj_size-1 : 0] Majs;
     reg [Majority_M_log-1:0] sum [maj_size-1 : 0];
     reg [2:0] Majs_9apx_internal [maj_size-1 : 0];
+    reg [1:0] Majs_7apx_internal [maj_size-1 : 0];
+    reg Majs_5apx_internal [maj_size-1 : 0];
     integer i1, i2;
 	always @(*) begin
 		for(i1 = 0; i1 < maj_size; i1 = i1 + 1) begin
@@ -52,16 +54,25 @@ module XNORPop(
 			if (Majority_approximate)begin
 				if (Majority_M == 3)begin
 					// there is no approximation in this case
+					// maj(0,1,2)
 					Majs[i1] = ((XNORs_padded[i1*3]&XNORs_padded[i1*3+1]) | (XNORs_padded[i1*3+1]&XNORs_padded[i1*3+2]) | (XNORs_padded[i1*3+2]&XNORs_padded[i1*3]));
 				end 
 				else if (Majority_M == 5) begin
-					Majs[i1] = 0;
+					// the simplest one. 
+					// maj(maj(0,1,2),3,4)
+					Majs_5apx_internal[i1] = ((XNORs_padded[i1*5]&XNORs_padded[i1*5+1]) | (XNORs_padded[i1*5+1]&XNORs_padded[i1*5+2]) | (XNORs_padded[i1*5+2]&XNORs_padded[i1*5]));
+					Majs[i1] = ((Majs_5apx_internal[i1]&XNORs_padded[i1*5+3]) | (XNORs_padded[i1*5+3]&XNORs_padded[i1*5+4]) | (XNORs_padded[i1*5+4]&Majs_5apx_internal[i1]));
 				end
 				else if (Majority_M == 7) begin
-					Majs[i1] = 0;
+					// the simplest one. 
+					// maj(maj(0,1,2),maj(3,4,5),6)
+					Majs_7apx_internal[i1][0] = ((XNORs_padded[i1*7]&XNORs_padded[i1*7+1]) | (XNORs_padded[i1*7+1]&XNORs_padded[i1*7+2]) | (XNORs_padded[i1*7+2]&XNORs_padded[i1*7]));
+					Majs_7apx_internal[i1][1] = ((XNORs_padded[i1*7+3]&XNORs_padded[i1*7+4]) | (XNORs_padded[i1*7+4]&XNORs_padded[i1*7+5]) | (XNORs_padded[i1*7+5]&XNORs_padded[i1*7+3]));
+					Majs[i1] = ((Majs_7apx_internal[i1][0]&Majs_7apx_internal[i1][1]) | (Majs_7apx_internal[i1][1]&XNORs_padded[i1*7+6]) | (XNORs_padded[i1*7+6]&Majs_7apx_internal[i1][0]));
 				end
 				else if (Majority_M == 9) begin
 					// two layers of Majority-3 circuits
+					// maj(maj(0,1,2),maj(3,4,5),maj(6,7,8))
 					Majs_9apx_internal[i1][0] = ((XNORs_padded[i1*9]&XNORs_padded[i1*9+1]) | (XNORs_padded[i1*9+1]&XNORs_padded[i1*9+2]) | (XNORs_padded[i1*9+2]&XNORs_padded[i1*9]));
 					Majs_9apx_internal[i1][1] = ((XNORs_padded[i1*9+3]&XNORs_padded[i1*9+4]) | (XNORs_padded[i1*9+4]&XNORs_padded[i1*9+5]) | (XNORs_padded[i1*9+5]&XNORs_padded[i1*9+3]));
 					Majs_9apx_internal[i1][2] = ((XNORs_padded[i1*9+6]&XNORs_padded[i1*9+7]) | (XNORs_padded[i1*9+7]&XNORs_padded[i1*9+8]) | (XNORs_padded[i1*9+8]&XNORs_padded[i1*9+6]));
