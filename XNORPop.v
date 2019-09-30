@@ -13,9 +13,9 @@ module XNORPop(
 		pop
     );
 	
-	parameter Majority_enable = 0;
-	parameter Majority_approximate = 0;
-	parameter Majority_M = 9;
+	parameter Majority_enable = 0; 
+	parameter Majority_approximate = 0; 
+	parameter Majority_M = 3;
 	parameter Majority_M_log = $clog2(Majority_M);
 
 	// 576 = 3 * 3 * 64
