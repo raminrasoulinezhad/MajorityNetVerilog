@@ -19,7 +19,9 @@ module XNORPop_reg(
     );
 
     parameter Majority_enable = 0;
+    parameter Majority_approximate = 0; 
     parameter Majority_M = 3;
+    
     // 576 = 3 * 3 * 64
     parameter pop_size = 576;	
     parameter maj_size = pop_size / Majority_M;
@@ -44,6 +46,7 @@ module XNORPop_reg(
 
 	wire [result_size-1 : 0] pop_temp;
 	defparam XNORPop_inst.Majority_enable = Majority_enable;
+	defparam XNORPop_inst.Majority_approximate = Majority_approximate;
 	defparam XNORPop_inst.pop_size = pop_size;
 	defparam XNORPop_inst.Majority_M = Majority_M;
 	XNORPop 	XNORPop_inst(
